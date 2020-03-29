@@ -40,7 +40,7 @@ public class ManagementController {
 	}
 	
 	@RequestMapping(
-			path = "/songs/{songId}",
+			path = "/song/{songId}",
 			method = RequestMethod.GET,
 			produces = MediaType.APPLICATION_JSON_VALUE)
 	public Song getDemoById (@PathVariable("songId") String songId) {

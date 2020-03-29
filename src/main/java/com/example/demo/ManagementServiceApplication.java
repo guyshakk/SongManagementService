@@ -25,13 +25,23 @@ public class ManagementServiceApplication implements ManagementService {
 	public Song create(Song song) {
 		if (!validate(song))
 			throw new RuntimeException("Wrong input supplied");
-		song.setSongId(null);
-		KeyObjectPair keyObject = this.restTemplate
-				.postForObject(this.url,
-						song, KeyObjectPair.class);
-		Song newSong = keyObject.getObject();
-		newSong.setSongId(keyObject.getKey());
-		updateSong(keyObject.getKey(), newSong);
+		Song s = null;
+		String id = song.getSongId();
+		try {
+			s = getSongById(id);
+		} catch (Exception e) {
+		} 
+		if (s != null)
+			throw new RuntimeException("SongId already exists");
+//		KeyObjectPair keyObject = this.restTemplate
+//				.postForObject(this.url + "/{id}",
+//						song, KeyObjectPair.class, id);
+		//Song newSong = keyObject.getObject();
+		Song newSong = this.restTemplate
+				.postForObject(this.url + "/{id}",
+						song,
+						Song.class,
+						id);
 		return newSong;
 	}
 
@@ -61,7 +71,9 @@ public class ManagementServiceApplication implements ManagementService {
 	}
 	
 	private boolean validate(Song song) {
-        return song.getAuthors() != null &&
+        return song.getSongId() != null &&
+        		!song.getSongId().trim().isEmpty() &&
+        		song.getAuthors() != null &&
         		!song.getAuthors().isEmpty() &&
         		song.getGenres() != null &&
         		!song.getGenres().isEmpty() &&
