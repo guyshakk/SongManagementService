@@ -1,9 +1,10 @@
 package com.example.demo;
-
+ 
 import java.util.List;
 import java.util.Map;
 
-public class Song {
+
+public class Song  {
 
 	private String songId;
 	private String name;
@@ -15,6 +16,30 @@ public class Song {
 	private String producer;
 	
 	public Song() {
+	}
+	
+	public Song(Song song) {
+		super();
+		this.songId=song.getSongId();
+		this.name = song.getName();
+		this.authors = song.getAuthors();
+		this.publishedYear = song.getPublishedYear();
+		this.genres = song.getGenres();
+		this.lyrics = song.getLyrics();
+		this.performer = song.getPerformer();
+		this.producer = song.getProducer();
+	}
+	
+	public Song(KeyObjectPair song) {
+		super();
+		this.songId=song.getObject().getSongId();
+		this.name = song.getObject().getName();
+		this.authors = song.getObject().getAuthors();
+		this.publishedYear = song.getObject().getPublishedYear();
+		this.genres = song.getObject().getGenres();
+		this.lyrics = song.getObject().getLyrics();
+		this.performer = song.getObject().getPerformer();
+		this.producer = song.getObject().getProducer();
 	}
 
 	public Song(String name, List<Map<String, String>> authors, int publishedYear, List<String> genres, String lyrics,
@@ -105,5 +130,6 @@ public class Song {
 	public void setProducer(String producer) {
 		this.producer = producer;
 	}
-	
+
+ 
 }
