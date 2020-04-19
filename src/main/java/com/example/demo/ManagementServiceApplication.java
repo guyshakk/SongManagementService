@@ -2,19 +2,13 @@ package com.example.demo;
 
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
-
-import javax.annotation.PostConstruct;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 @Service
@@ -22,24 +16,9 @@ public class ManagementServiceApplication implements ManagementService {
 
 	private RestTemplate restTemplate;
 	private String url;
-	Map<SongAttributes,Comparator<Song>> comparators;
 	
 	public ManagementServiceApplication() {
 		this.restTemplate = new RestTemplate();
-	}
-	
-	/**Get all possible Song comparators and store them in a map**/
-	@PostConstruct
-	public void init() {
-		comparators = new HashMap<SongAttributes, Comparator<Song>>();
-		comparators.put(SongAttributes.NAME, new NameComparator());
-		comparators.put(SongAttributes.PERFORMER, new PerformerComparator());
-		comparators.put(SongAttributes.LYRICS, new LyricsComparator());
-		comparators.put(SongAttributes.SONGID, new SongIdComparator());
-		comparators.put(SongAttributes.PRODUCER, new ProducerComparator());
-		comparators.put(SongAttributes.AUTHORS, new AuthorsComparator());
-		comparators.put(SongAttributes.GENRES, new GenresComparator());
-		comparators.put(SongAttributes.PUBLISHEDYEAR, new PublishedYearComparator());
 	}
 	
 	@Value("${storage.service.url}")
@@ -112,21 +91,25 @@ public class ManagementServiceApplication implements ManagementService {
 		this.restTemplate.delete(this.url);
 	}
 	
-	/**First get all Songs with criteriaValue in criteriaType field; Then sort and get the correct page**/
+	/**Get the correct page of Songs with criteriaValue in criteriaType field sorted**/	
 	@Override
 	public List<Song> readSongsBy(String criteriaType, String criteriaValue, int size, int page,
 			String sortBy, String sortOrder) {
 		
 		validatePagination(page, size);
-		List<Song> songs = null;
+		validateSortAttributes(sortBy, sortOrder);
 		try {
-			songs = Arrays
+			return Arrays
 					.asList
 					(this.restTemplate
 							.getForObject
-							(this.url+"/"+criteriaType+"/{criteriaValue}",
+							(this.url+"/"+criteriaType+"/{criteriaValue}/{sortBy}/{sortOrder}/{page}/{size}",
 									Song[].class, 
-									criteriaValue));
+									criteriaValue,
+									sortBy,
+									sortOrder,
+									page,
+									size));
 		} catch (HttpClientErrorException e) {
 			if (e.getStatusCode().equals(HttpStatus.NOT_ACCEPTABLE)) {
 				throw new MissingFieldException("Not all songs in storage have attribute " + criteriaType + "; unable to complete action");
@@ -134,12 +117,6 @@ public class ManagementServiceApplication implements ManagementService {
 			else
 				throw e;
 		}
-		return songs
-				.stream()
-				.sorted(getComparator(sortBy, sortOrder))
-				.skip(page*size)
-				.limit(size)
-				.collect(Collectors.toList());
 	}
 
 	private void validatePagination(int page, int size) {
@@ -147,9 +124,8 @@ public class ManagementServiceApplication implements ManagementService {
 			throw new InvalidPaginationDataException("Invalid pagination data. Please supply page bigger than 0 and size between 0 and 100");
 		}
 	}
-
-	/**Get the correct comparator for Song comparison by sortBy and sortOrder attributes**/
-	private Comparator<Song> getComparator(String sortBy, String sortOrder) {
+	
+	private void validateSortAttributes(String sortBy, String sortOrder) {
 		
 		//Check whether sortBy value is one of the song Attributes
 		if (!Arrays.asList
@@ -173,12 +149,6 @@ public class ManagementServiceApplication implements ManagementService {
 			
 			throw new UnsupportedSortOrderException(sortOrder);
 		}
-		
-		//return the correct comparator in the correct order (reversed or regular)
-		return sortOrder.toLowerCase().
-				equals(SortOrder.ASC.toString().toLowerCase()) ? 
-						this.comparators.get(SongAttributes.valueOf(sortBy.toUpperCase())) : 
-							this.comparators.get(SongAttributes.valueOf(sortBy.toUpperCase())).reversed();
 	}
 
 	/**Get all songs with pagination**/
@@ -186,13 +156,14 @@ public class ManagementServiceApplication implements ManagementService {
 	public List<Song> readAllSongs(String sortBy, String sortOrder, int size, int page) {
 		
 		validatePagination(page, size);
-		List<Song> songs = Arrays.asList(this.restTemplate.getForObject(this.url+"/all", Song[].class));
-		return songs
-				.stream()
-				.sorted(getComparator(sortBy, sortOrder))
-				.skip(size*page)
-				.limit(size)
-				.collect(Collectors.toList());
+		validateSortAttributes(sortBy, sortOrder);
+		return Arrays.asList(this.restTemplate
+				.getForObject(this.url+"/all/{sortBy}/{sortOrder}/{page}/{size}", 
+						Song[].class,
+						sortBy,
+						sortOrder,
+						page,
+						size));
 	}
 
 	
